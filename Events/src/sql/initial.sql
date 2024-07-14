@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS events;
+
+CREATE TABLE IF NOT EXISTS events(
+    id INTEGER PRIMARY KEY,
+    source_id INTEGER REFERENCES events(id) DEFAULT NULL,
+    updated_by VARCHAR(55) NOT NULL,
+    updated_at VARCHAR(25) DEFAULT CURRENT_TIMESTAMP,
+    processed BOOLEAN DEFAULT(FALSE),
+    cancelled BOOLEAN DEFAULT(FALSE),
+    payload JSON NOT NULL
+);
