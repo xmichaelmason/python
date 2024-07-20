@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import json
 import sqlite3
 from datetime import datetime as dt
@@ -6,9 +7,13 @@ class Connection:
     def __init__(self, db_path):
         self.db_path = db_path
 
-    def execute_file(self, filepath):
+    def setup(self):
         con = sqlite3.connect(self.db_path)
         cursor = con.cursor()
+        return (con, cursor)
+
+    def execute_file(self, filepath):
+        con, cursor = self.setup()
 
         file = open(filepath, "r")
         sql = file.read()
@@ -21,106 +26,82 @@ class Connection:
         for command in commands:
             try:
                 cursor.execute(command)
+
                 processed["success"].append(command)
             except sqlite3.Error as e:
                 error = {"command": command,
                         "error": str(e)}
                 processed["fail"].append(error)
-                return json.dumps(processed)
 
         con.close()
         return json.dumps(processed)
 
-    def track_event(self, username, source_id, payload):
-        con = sqlite3.connect(self.db_path)
-        cursor = con.cursor()
+    def create_event(self, table_name, username, payload):
+        con, cursor = self.setup()
 
-        processed = {"success": [], "fail": []}
-        command = "INSERT INTO events (updated_by, source_id, payload) VALUES (?, ?, ?)"
+        command = f"INSERT INTO {table_name} (created_by, payload) VALUES (?, ?)"
+
+        output = {}
 
         try:
             con.execute("BEGIN TRANSACTION")
-            cursor.execute(command, (username, source_id, payload))
-            processed["success"].append(command)
+            cursor.execute(command, (username, payload))
             con.commit()
+
+            output ={"command": command,
+                    "payload" : payload}
         except sqlite3.Error as e:
             con.rollback()
-            error = {"error": str(e),
+            output = {"error": str(e),
                     "command": command}
-            processed["fail"].append(error)
 
         con.close()
-        return json.dumps(processed)
+        return json.dumps(output)
 
-    def process_event(self, username, row_id):
-        con = sqlite3.connect(self.db_path)
-        cursor = con.cursor()
+    def process_event(self, table_name, username, row_id):
+        con, cursor = self.setup()
 
-        processed = {"success": [], "fail": []}
-        command = "UPDATE events SET processed = TRUE WHERE id = ? or source_id = ?"
+        command = f"UPDATE {table_name} SET processed = TRUE, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+
+        output = {}
 
         try:
-            # Start a transaction
             con.execute("BEGIN TRANSACTION")
-
-            # Track the event (insert tracking entry)
-            insert_result = self.track_event(username, row_id, command)
-            processed["success"].append(insert_result)
-
-            # Execute the update command
-            cursor.execute(command, (row_id, row_id))
-            processed["success"].append(command)
-
-            # Commit the transaction if everything was successful
+            cursor.execute(command, (username, row_id))
             con.commit()
 
+            output ={"command": command}
         except sqlite3.Error as e:
-            # Rollback the transaction on error
             con.rollback()
-
-            error = {"error": str(e), "command": command}
-            processed["fail"].append(error)
+            output = {"error": str(e),
+                    "command": command}
 
         con.close()
-        return json.dumps(processed)
+        return json.dumps(output)
 
+    def cancel_event(self, table_name, username, row_id):
+        con, cursor = self.setup()
 
-    def cancel_event(self, username, row_id):
-        con = sqlite3.connect(self.db_path)
-        cursor = con.cursor()
+        command = f"UPDATE {table_name} SET cancelled = TRUE, updated_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
 
-        processed = {"success": [], "fail": []}
-        command = "UPDATE events SET cancelled = TRUE WHERE id = ? or source_id = ?"
+        output = {}
 
         try:
-            # Start a transaction
             con.execute("BEGIN TRANSACTION")
-
-            # Track the event (insert tracking entry)
-            insert_result = self.track_event(username, row_id, command)
-            processed["success"].append(insert_result)
-
-            # Execute the update command
-            cursor.execute(command, (row_id, row_id))
-            processed["success"].append(command)
-
-            # Commit the transaction if everything was successful
+            cursor.execute(command, (username, row_id))
             con.commit()
 
+            output ={"command": command}
         except sqlite3.Error as e:
-            # Rollback the transaction on error
             con.rollback()
-
-            error = {"error": str(e), "command": command}
-            processed["fail"].append(error)
+            output = {"error": str(e),
+                    "command": command}
 
         con.close()
-        return json.dumps(processed)
+        return json.dumps(output)
 
-
-    def query_rows(self, statement):
-        con = sqlite3.connect(self.db_path)
-        cursor = con.cursor()
+    def query_table(self, statement):
+        con, cursor = self.setup()
 
         cursor.execute(statement)
         rows = cursor.fetchall()
@@ -130,15 +111,19 @@ class Connection:
 
 
 if __name__ == "__main__":
-    test_db = Connection("/home/mason/Public/Events/test/test.db")
+    test_db = Connection("../test/test.db")
     filepath = "sql/initial.sql"
+    table_name = "events"
+    username = "mason"
 
     created = test_db.execute_file(filepath)
-    tracked = test_db.track_event("mason", None, created)
+    tracked = test_db.create_event(table_name, username, created)
+
 
     row_id = 1
-    processed_row = test_db.process_event("mason", row_id)
-    cancelled_row = test_db.cancel_event("mason", row_id)
+    processed_row = test_db.process_event(table_name, username, row_id)
+    cancelled_row = test_db.cancel_event(table_name, username, row_id)
 
-    print(test_db.query_rows("SELECT * FROM events"))
+    rows = test_db.query_table(f"SELECT * FROM {table_name}")
 
+    print(rows)
