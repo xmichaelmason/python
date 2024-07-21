@@ -103,7 +103,7 @@ class Connection:
     def get_unprocessed(self, table_name):
         con, cursor = self.setup()
 
-        statement = f"SELECT * FROM {table_name} WHERE processed = FALSE"
+        statement = f"SELECT * FROM {table_name} WHERE processed = FALSE ORDER BY created_at ASC"
 
         cursor.execute(statement)
         rows = cursor.fetchall()
