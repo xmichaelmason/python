@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 class Node:
     def __init__(self, data):
         self.prev = None
@@ -7,12 +8,14 @@ class Node:
 class DoublyLinkedList:
     def __init__(self):
         self.head = None
+        self.tail = None
         self.size = 0
 
     def head_insert(self, data) -> Node:
         new_node = Node(data)
         if self.head is None:
             self.head = new_node
+            self.tail = self.head
         else:
             new_node.next = self.head
             self.head.prev = new_node
@@ -25,29 +28,37 @@ class DoublyLinkedList:
         new_node = Node(data)
         if self.head is None:
             self.head = new_node
+            self.tail = self.head
             self.size += 1
             return self.head
-        current = self.traverse()
-        current.next = new_node
+        current = self.reverse_traverse(self.size - 1)
         new_node.prev = current
+        current.next = new_node
+        self.tail = current.next
         self.size += 1
         return self.head
     
     def position_insert(self, data, position):
         new_node = Node(data)
+
         if self.head is None:
             self.head = new_node
+            self.tail = self.head
             self.size += 1
             return self.head
+
         if position >= self.size:
-            self.size += 1
-            return self.tail_insert(data)
+            return
+
         current = self.traverse(position)
+        current.next.prev = new_node
         new_node.next = current.next
-        current.next = new_node
         new_node.prev = current
+        current.next = new_node
         self.size += 1
+
         return self.head
+
         
     def traverse(self, position = None) -> Node:
         current = self.head
@@ -56,11 +67,24 @@ class DoublyLinkedList:
                 current = current.next
         else:
             if position >= self.size:
-                position = self.size - 1
+                return
             counter = 0
             while counter < position - 1:
                 current = current.next
                 counter += 1
+        return current
+
+    def reverse_traverse(self, position = None):
+        current = self.tail
+        if position is None:
+            current = current.prev
+        else:
+            if position >= self.size:
+                return
+            counter = self.size - 1
+            while counter > position:
+                current = current.prev
+                counter -= 1
         return current
     
     def head_delete(self):
@@ -77,12 +101,14 @@ class DoublyLinkedList:
         if self.head is None:
             return None
         if self.head.next is None:
-            self.head = None  # Corrected this line
+            self.head = None
+            self.tail = self.head.prev
             self.size -= 1
             return None
 
-        prev = self.traverse(self.size - 1)  # Corrected index passed to traverse
+        prev = self.reverse_traverse(1)  # Corrected index passed to traverse
         prev.next = None
+        self.tail = prev
         self.size -= 1
         return self.head
     
@@ -108,7 +134,6 @@ class DoublyLinkedList:
         self.size -= 1
         return self.head
 
-    
     def search(self, data):
         current = self.head
         while current is not None:
@@ -127,35 +152,67 @@ class DoublyLinkedList:
     
 
 if __name__ == "__main__":
-    # Test cases
+    # Create a new doubly linked list
     dll = DoublyLinkedList()
 
-    # Insertion tests
+    # Test head insertion
+    print("Inserting 1 at head")
     dll.head_insert(1)
+    print(f"List length: {dll.find_length()}")
+    print(f"Head: {dll.head.data}")
+    print(f"Tail: {dll.tail.data}")
+
+    print("Inserting 2 at head")
     dll.head_insert(2)
-    dll.tail_insert(3)
-    dll.position_insert(4, 1)
+    print(f"List length: {dll.find_length()}")
+    print(f"Head: {dll.head.data}")
+    print(f"Tail: {dll.tail.data}")
 
-    # Display the list
-    current = dll.head
-    while current:
-        print(current.data, end=" ")
-        current = current.next
-    print()
+    print("Inserting 3 at head")
+    dll.head_insert(3)
+    print(f"List length: {dll.find_length()}")
+    print(f"Head: {dll.head.data}")
+    print(f"Tail: {dll.tail.data}")
 
-    # Deletion tests
+    # Test tail insertion
+    print("Inserting 4 at tail")
+    dll.tail_insert(4)
+    print(f"List length: {dll.find_length()}")
+    print(f"Head: {dll.head.data}")
+    print(f"Tail: {dll.tail.data}")
+
+    # Test position insertion
+    print("Inserting 5 at position 2 (0-based index)")
+    dll.position_insert(5, 2)
+    print(f"List length: {dll.find_length()}")
+    print(f"Head: {dll.head.data}")
+    print(f"Tail: {dll.tail.data}")
+
+    # Test head deletion
+    print("Deleting head")
     dll.head_delete()
+    print(f"List length: {dll.find_length()}")
+    print(f"New head: {dll.head.data}")
+    print(f"Tail: {dll.tail.data}")
+
+    # Test tail deletion
+    print("Deleting tail")
     dll.tail_delete()
+    print(f"List length: {dll.find_length()}")
+    print(f"Head: {dll.head.data}")
+    print(f"New tail: {dll.tail.data}")
+
+    # Test position deletion
+    print("Deleting at position 1 (0-based index)")
     dll.position_delete(1)
+    print(f"List length: {dll.find_length()}")
+    print(f"Head: {dll.head.data}")
+    print(f"Tail: {dll.tail.data}")
 
-    # Display the list after deletions
-    current = dll.head
-    while current:
-        print(current.data, end=" ")
-        current = current.next
-    print()
+    # Test search
+    print("Searching for values")
+    print(f"Search for 2: {dll.search(2)}")
+    print(f"Search for 5: {dll.search(5)}")
+    print(f"Search for 10: {dll.search(10)}")
 
-    # Search and length tests
-    print("Length of the list:", dll.find_length())
-    print("Is 4 in the list?", dll.search(4))
-    print("Is 1 in the list?", dll.search(1))
+    print("All tests completed!")
