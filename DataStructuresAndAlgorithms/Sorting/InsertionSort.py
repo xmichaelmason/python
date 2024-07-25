@@ -1,5 +1,4 @@
 #! /usr/bin/env python3
-
 def insertion_sort(arr):
     for i in range(len(arr)):
         for j in range(i, 0, -1):
